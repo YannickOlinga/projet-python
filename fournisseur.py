@@ -1,20 +1,29 @@
-import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout
+import sqlite3
 
-class FournisseurUI(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Fournisseur")
-        self.setGeometry(100, 100, 800, 600)
-        self.setup_ui()
+# Connexion à la base de données (ou création si elle n'existe pas)
+conn = sqlite3.connect('pharmacie.db')
 
-    def setup_ui(self):
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel("Welcome to the Fournisseur Page"))
-        self.setLayout(layout)
+# Création d'un curseur
+cursor = conn.cursor()
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = FournisseurUI()
-    window.show()
-    sys.exit(app.exec_())
+# Commande SQL pour créer la table
+create_table_query = """
+CREATE TABLE IF NOT EXISTS medicaments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    quantity INTEGER NOT NULL,
+    price REAL NOT NULL
+);
+"""
+
+# Exécution de la commande
+try:
+    cursor.execute(create_table_query)
+    print("Table 'medicaments' créée avec succès.")
+except sqlite3.Error as e:
+    print(f"Erreur lors de la création de la table: {e}")
+
+# Fermeture de la connexion
+finally:
+    conn.commit()  # Valider les changements
+    conn.close()
