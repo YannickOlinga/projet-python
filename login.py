@@ -1,38 +1,91 @@
-import tkinter as tk
-from tkinter import messagebox
+import sys
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QMessageBox, QInputDialog
+import sqlite3
+from signup import SignUpForm  # Import the SignUpForm
 
-def login():
-    username = entry_username.get()
-    password = entry_password.get()
-    
-    if username == "admin" and password == "password":
-        messagebox.showinfo("Login", "Login Successful")
-    else:
-        messagebox.showerror("Login", "Invalid Username or Password")
+class LoginForm(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+        self.create_table()  # Create the table when the form is initialized
 
-# Create the main window
-root = tk.Tk()
-root.title("Login")
-root.geometry("400x300")  # Set the window size
+    def initUI(self):
+        self.setWindowTitle('Login Form')
+        self.setGeometry(100, 100, 300, 200)
 
-# Define a larger font
-font_large = ("Helvetica", 14)
+        layout = QVBoxLayout()
 
-# Create and place the username label and entry
-label_username = tk.Label(root, text="Username", font=font_large)
-label_username.pack(pady=10)
-entry_username = tk.Entry(root, font=font_large)
-entry_username.pack(pady=10, ipadx=10, ipady=5)
+        self.label_name = QLabel('name:')
+        self.input_name = QLineEdit()
+        layout.addWidget(self.label_name)
+        layout.addWidget(self.input_name)
 
-# Create and place the password label and entry
-label_password = tk.Label(root, text="Password", font=font_large)
-label_password.pack(pady=10)
-entry_password = tk.Entry(root, show="*", font=font_large)
-entry_password.pack(pady=10, ipadx=10, ipady=5)
+        self.label_password = QLabel('Password:')
+        self.input_password = QLineEdit()
+        self.input_password.setEchoMode(QLineEdit.Password)
+        layout.addWidget(self.label_password)
+        layout.addWidget(self.input_password)
 
-# Create and place the login button
-button_login = tk.Button(root, text="Login", command=login, font=font_large)
-button_login.pack(pady=20, ipadx=10, ipady=5)
+        self.button_login = QPushButton('Login')
+        self.button_login.clicked.connect(self.check_credentials)
+        layout.addWidget(self.button_login)
 
-# Run the application
-root.mainloop()
+        self.setLayout(layout)
+
+    def create_connection(self):
+        conn = None
+        try:
+            conn = sqlite3.connect('pharmacie.db')
+        except sqlite3.Error as e:
+            print(e)
+        return conn
+
+    def create_table(self):
+        conn = self.create_connection()
+        if conn is not None:
+            try:
+                c = conn.cursor()
+                c.execute('''CREATE TABLE IF NOT EXISTS users (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                name TEXT NOT NULL UNIQUE,
+                                password TEXT NOT NULL);''')
+                conn.commit()
+            except sqlite3.Error as e:
+                print(e)
+            finally:
+                conn.close()
+
+    def check_user(self, name, password):
+        conn = self.create_connection()
+        if conn is not None:
+            try:
+                c = conn.cursor()
+                c.execute('SELECT * FROM users WHERE name=? AND password=?', (name, password))
+                user = c.fetchone()
+                return user is not None
+            except sqlite3.Error as e:
+                print(e)
+            finally:
+                conn.close()
+        return False
+
+    def check_credentials(self):
+        name = self.input_name.text()
+        password = self.input_password.text()
+
+        if self.check_user(name, password):
+            QMessageBox.information(self, 'Success', 'Login Successful')
+        else:
+            reply = QMessageBox.question(self, 'Account Not Found', 'User not found. Would you like to create an account?', QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            if reply == QMessageBox.Yes:
+                self.open_signup()
+
+    def open_signup(self):
+        self.signup_form = SignUpForm()
+        self.signup_form.show()
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    login_form = LoginForm()
+    login_form.show()
+    sys.exit(app.exec_())
